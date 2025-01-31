@@ -74,6 +74,7 @@ def main(args):
     toy_example=True
     counter=0
     if(toy_example):
+        print("using toy example!")
         max_tokens=128
 
 
@@ -86,7 +87,12 @@ def main(args):
     records = []
     inputs = []
 
+    
     for row in dataset.iterrows():
+        if(toy_example):
+            counter+=1
+            if(counter>=3):
+              break
         record = row[1].to_dict()
         # Exclude multilingual tasks for base models
         if record["capability"] == "multilingual":
@@ -94,18 +100,23 @@ def main(args):
         records.append(record)
         inputs.append(apply_template_base(record))
 
+    
+
+
+    sampling_params={
+        "max_tokens": max_tokens,
+        "use_tqdm": True,
+  
+    }
 
     params = {
         "max_tokens": max_tokens,
-        "use_beam_search":True,
-        "repetition_penalty": 1.00,
-        "best_of": beam_size,
-        "temperature": 1.0,
-        "use_tqdm": True,
+        "beam_width": beam_size,
     }
 
     # TODO: Support changing and setting the model parameters from the command line
     if toy_example:
+        print("using toy model!")
         model = VLLM(model_name, dtype='half')
     elif model_name.endswith("AWQ"):
         model = VLLM(model_name, tensor_parallel_size=1, quantization="AWQ")
@@ -114,7 +125,13 @@ def main(args):
     else:
         model = VLLM(model_name, tensor_parallel_size=1)
 
-    outputs = model.completions(inputs, **params)
+    # print("\n\n\n\n\n start completions!!")
+    # outputs = model.completions(inputs, **sampling_params)
+    # print("outputs is ",outputs)
+
+
+    print("\n\n\n\n\n start beam completions!!")
+    outputs = model.beam_completions(inputs, **params)
 
     if len(outputs) != 695:
         warnings.warn(f"Expected 765 outputs, got {len(outputs)}")
@@ -149,8 +166,15 @@ if __name__ == "__main__":
         "--output_file_path",
         type=str,
         required=True,
-        help="Path to save the output response file",
+        help="Path to save the output file",
     )
+    parser.add_argument(
+        "--beam_size",
+        type=int,
+        required=True,
+        help="Number of beams",
+    )
+
 
     hf_token = dotenv_values(".env").get("HF_TOKEN", None)
     if hf_token is not None:

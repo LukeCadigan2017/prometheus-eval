@@ -10,6 +10,7 @@ class VLLMError(Exception):
 
 try:
     from vllm import LLM, SamplingParams
+    from vllm.sampling_params import BeamSearchParams
 except ImportError as e:
     raise VLLMError(
         status_code=1,
@@ -45,3 +46,20 @@ class VLLM:
         outputs = self.model.generate(prompts, params, use_tqdm=use_tqdm)
         outputs = [output.outputs[0].text for output in outputs]
         return outputs
+    
+
+    def beam_completions(
+        self,
+        prompts: List[str],
+        use_tqdm: bool = True,
+        **kwargs: Union[int, float, str],
+    ) -> List[str]:
+        prompts = [{"prompt": prompt.strip()} for prompt in prompts]
+        params = BeamSearchParams(**kwargs)
+        print("prompts is ",prompts)
+
+        outputs = self.model.beam_search(prompts, params)
+        print("outputs is ",prompts)
+        outputs = [output.outputs[0].text for output in outputs]
+        return outputs
+
